@@ -1,5 +1,5 @@
 // طبقة البيانات: Firebase (سحابي + يعمل بدون إنترنت) أو تخزين محلي في الوضع التجريبي.
-import { firebaseConfig, OWNER_EMAIL } from '../firebase-config.js';
+import { firebaseConfig } from '../firebase-config.js';
 import { initializeApp } from 'firebase/app';
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
@@ -11,7 +11,6 @@ import {
 } from 'firebase/auth';
 
 export const isCloud = Boolean(firebaseConfig && firebaseConfig.apiKey);
-export const ownerEmail = (OWNER_EMAIL || '').trim().toLowerCase();
 
 export function deepMerge(target, src) {
   const out = { ...(target || {}) };
@@ -120,19 +119,31 @@ export function onAuth(cb) {
     setTimeout(() => cb({ email: 'وضع تجريبي', role: 'admin' }), 0);
     return () => {};
   }
-  let unsubRole = null;
+  let unsubs = [];
+  const clear = () => { unsubs.forEach((u) => u()); unsubs = []; };
   const unsub = onAuthStateChanged(fauth, (user) => {
-    unsubRole && unsubRole();
-    unsubRole = null;
+    clear();
     if (!user) { currentEmail = ''; cb(null); return; }
     const email = (user.email || '').toLowerCase();
     currentEmail = email;
-    if (email === ownerEmail) { cb({ email, role: 'admin' }); return; }
-    unsubRole = onSnapshot(doc(fdb, 'users', email),
-      (d) => cb({ email, role: d.exists() ? d.data().role : 'none' }),
-      () => cb({ email, role: 'none' }));
+    // أول حساب يسجل في الموقع يصبح صاحبه (meta/owner) ولا يمكن تغييره بعدها
+    let owner, role;
+    const emit = () => {
+      if (owner === undefined || role === undefined) return;
+      cb({ email, role: owner === email ? 'admin' : role });
+    };
+    unsubs.push(onSnapshot(doc(fdb, 'meta', 'owner'), (d) => {
+      if (!d.exists() && !d.metadata.fromCache) {
+        setDoc(doc(fdb, 'meta', 'owner'), { email, createdAt: serverTimestamp() }).catch((e) => console.warn(e));
+      }
+      owner = d.exists() ? d.data().email : null;
+      emit();
+    }, () => { owner = null; emit(); }));
+    unsubs.push(onSnapshot(doc(fdb, 'users', email),
+      (d) => { role = d.exists() ? d.data().role : 'none'; emit(); },
+      () => { role = 'none'; emit(); }));
   });
-  return () => { unsub(); unsubRole && unsubRole(); };
+  return () => { unsub(); clear(); };
 }
 
 export const login = (email, pass) => signInWithEmailAndPassword(fauth, email.trim(), pass);

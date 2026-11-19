@@ -24,16 +24,15 @@ npm run dev
 ```
 ما دام `apiKey` فارغًا في `src/firebase-config.js` يعمل الموقع في **الوضع التجريبي** (البيانات على الجهاز فقط).
 
-## الربط بـ Firebase
-1. أنشئ مشروعًا في [Firebase Console](https://console.firebase.google.com).
-2. فعّل **Authentication > Email/Password** و **Firestore Database**.
-3. أضف Web App وانسخ الإعدادات إلى `src/firebase-config.js`، واكتب بريدك في `OWNER_EMAIL`.
-4. اكتب نفس البريد مكان `OWNER_EMAIL` في `firestore.rules`.
-5. انشر:
-```bash
-npm run build
-npx firebase-tools deploy --project <project-id>
-```
-6. افتح الموقع، اختر "حساب جديد" ببريدك، ثم من الإعدادات استورد ملف البيانات السابقة وأضف بريد مدير المركز.
+## الربط بـ Firebase والنشر
+الموقع مربوط بمشروع Firebase `mri-department`، ويُنشر تلقائيًا على GitHub Pages عند كل دمج في `main`:
+https://kbs7s.github.io/mri-department/
+
+إعدادات تُعمل مرة واحدة:
+1. **GitHub:** Settings > Pages > Source = **GitHub Actions**.
+2. **Firebase > Authentication:** فعّل Email/Password، وأضف `kbs7s.github.io` في Settings > Authorized domains.
+3. **Firebase > Firestore > Rules:** الصق محتوى `firestore.rules` واضغط Publish.
+4. افتح الموقع واختر "حساب جديد": **أول حساب يسجل يصبح صاحب الموقع** بصلاحية كاملة.
+5. من الإعدادات: استورد ملف البيانات السابقة، وأضف بريد مدير المركز.
 
 > ملف البيانات السابقة لا يُحفظ في هذا المستودع لأنه عام.
