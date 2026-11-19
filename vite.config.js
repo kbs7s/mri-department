@@ -17,8 +17,8 @@ export default defineConfig({
         dir: 'rtl',
         display: 'standalone',
         start_url: '.',
-        background_color: '#f4f6f9',
-        theme_color: '#0f4c81',
+        background_color: '#f1f5f9',
+        theme_color: '#0f766e',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
@@ -28,7 +28,19 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        navigateFallback: 'index.html'
+        navigateFallback: 'index.html',
+        // حفظ خطوط Google على الجهاز ليبقى شكل الموقع نفسه بدون إنترنت
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts',
+              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          }
+        ]
       }
     })
   ],
