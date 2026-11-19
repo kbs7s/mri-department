@@ -2,12 +2,18 @@ import { useState } from 'react';
 import { useStore } from '../data/store.jsx';
 import { save, remove, saveMany, isCloud } from '../data/backend.js';
 import { DEFAULT_MATERIALS, DEVICES } from '../data/model.js';
+import { Icon } from '../components/ui.jsx';
 
 export default function Settings() {
   const { isAdmin } = useStore();
   return (
     <div className="page">
-      <div className="page-head"><h2>الإعدادات</h2></div>
+      <div className="page-head">
+        <div className="page-head-title">
+          <h2>الإعدادات</h2>
+          <span className="page-sub">إدارة المواد والموظفين والصلاحيات والنسخ الاحتياطي</span>
+        </div>
+      </div>
       {isAdmin && <MaterialsEditor />}
       {isAdmin && <StaffEditor />}
       {isAdmin && isCloud && <UsersEditor />}
@@ -30,18 +36,36 @@ function MaterialsEditor() {
   };
   return (
     <section className="card">
-      <h3>المواد</h3>
+      <div className="card-head">
+        <h3>
+          <span className="card-title-icon"><Icon name="inventory" size={16} /></span>
+          <span>المواد</span>
+        </h3>
+        <span className="badge gray">{materials.length} مادة</span>
+      </div>
       {!materials.length && (
-        <button className="btn" onClick={() => saveMany(DEFAULT_MATERIALS.map(({ id, ...data }) => ({ col: 'materials', id, data })))}>
-          إضافة المواد الافتراضية
+        <button
+          className="btn primary small"
+          onClick={() => saveMany(DEFAULT_MATERIALS.map(({ id, ...data }) => ({ col: 'materials', id, data })))}
+        >
+          <Icon name="plus" size={15} />
+          <span>إضافة المواد الافتراضية</span>
         </button>
       )}
       <div className="stack">
         {materials.map((m) => <MaterialRow key={m.id} m={m} />)}
       </div>
       <div className="row">
-        <input placeholder="اسم مادة جديدة (مثلًا: كفوف، سرنجات)" value={newName} onChange={(e) => setNewName(e.target.value)} />
-        <button className="btn primary small" onClick={add}>إضافة</button>
+        <input
+          placeholder="اسم مادة جديدة (مثلًا: كفوف، سرنجات)"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') add(); }}
+        />
+        <button className="btn primary small" onClick={add}>
+          <Icon name="plus" size={15} />
+          <span>إضافة</span>
+        </button>
       </div>
     </section>
   );
@@ -55,14 +79,23 @@ function MaterialRow({ m }) {
   return (
     <div className={`sub-card ${m.active === false ? 'inactive' : ''}`}>
       <div className="row between">
-        <b>{m.name}</b>
+        <div>
+          <b>{m.name}</b>
+          <span className="muted small"> · {m.unit || 'قطعة'}{m.minStock != null ? ` · حد أدنى ${m.minStock}` : ''}</span>
+        </div>
         <div className="row">
-          <label className="check"><input type="checkbox" checked={m.active !== false} onChange={(e) => put({ active: e.target.checked })} /> فعّالة</label>
-          <button className="link" onClick={() => setOpen(!open)}>{open ? 'إغلاق' : 'تعديل'}</button>
+          <label className="switch">
+            <input type="checkbox" checked={m.active !== false} onChange={(e) => put({ active: e.target.checked })} />
+            <span>فعّالة</span>
+          </label>
+          <button className="btn ghost small" onClick={() => setOpen(!open)}>
+            <span>{open ? 'إغلاق' : 'تعديل'}</span>
+            <Icon name="chevronDown" size={15} className={`accordion-chevron ${open ? 'open' : ''}`} />
+          </button>
         </div>
       </div>
       {open && (
-        <div className="stack">
+        <div className="stack" style={{ marginTop: '.75rem' }}>
           <div className="fields">
             <label className="field"><span className="field-label">الاسم</span>
               <input defaultValue={m.name} onBlur={(e) => e.target.value.trim() && put({ name: e.target.value.trim() })} /></label>
@@ -73,7 +106,10 @@ function MaterialRow({ m }) {
             <label className="field"><span className="field-label">الترتيب</span>
               <input type="number" defaultValue={m.order ?? ''} onBlur={(e) => put({ order: Number(e.target.value) || 99 })} /></label>
           </div>
-          <label className="check"><input type="checkbox" checked={!!m.hasSale} onChange={(e) => put({ hasSale: e.target.checked })} /> فيها بيع</label>
+          <label className="switch">
+            <input type="checkbox" checked={!!m.hasSale} onChange={(e) => put({ hasSale: e.target.checked })} />
+            <span>فيها بيع</span>
+          </label>
           <div className="muted small">حقول العدّ (تظهر في الجرد). اربط الحقل بجهاز ليُحسب ضمن الفحوصات الملونة لذلك الجهاز.</div>
           {cfs.map((f, i) => (
             <div className="row" key={f.key}>
@@ -82,10 +118,18 @@ function MaterialRow({ m }) {
                 <option value="">غير مرتبط</option>
                 {DEVICES.map((d) => <option key={d.key} value={d.key}>ملون {d.label}</option>)}
               </select>
-              <button className="btn ghost small" onClick={() => setCF(cfs.filter((_, j) => j !== i))}>حذف</button>
+              <button className="btn danger-ghost small" onClick={() => setCF(cfs.filter((_, j) => j !== i))}>
+                <Icon name="trash" size={15} />
+                <span>حذف</span>
+              </button>
             </div>
           ))}
-          <button className="btn ghost small" onClick={() => setCF([...cfs, { key: 'c' + Date.now().toString(36), label: 'عدد جديد' }])}>+ حقل عدّ</button>
+          <div>
+            <button className="btn small" onClick={() => setCF([...cfs, { key: 'c' + Date.now().toString(36), label: 'عدد جديد' }])}>
+              <Icon name="plus" size={15} />
+              <span>حقل عدّ جديد</span>
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -102,18 +146,38 @@ function StaffEditor() {
   };
   return (
     <section className="card">
-      <h3>الموظفون</h3>
+      <div className="card-head">
+        <h3>
+          <span className="card-title-icon"><Icon name="users" size={16} /></span>
+          <span>الموظفون</span>
+        </h3>
+        <span className="badge gray">{staff.length} موظف</span>
+      </div>
       <div className="stack">
         {staff.map((s) => (
           <div className="row" key={s.id}>
-            <input defaultValue={s.name} onBlur={(e) => e.target.value.trim() && e.target.value !== s.name && save('staff', s.id, { name: e.target.value.trim() })} />
-            <label className="check"><input type="checkbox" checked={s.active !== false} onChange={(e) => save('staff', s.id, { active: e.target.checked })} /> فعّال</label>
+            <input
+              defaultValue={s.name}
+              onBlur={(e) => e.target.value.trim() && e.target.value !== s.name && save('staff', s.id, { name: e.target.value.trim() })}
+            />
+            <label className="switch">
+              <input type="checkbox" checked={s.active !== false} onChange={(e) => save('staff', s.id, { active: e.target.checked })} />
+              <span>فعّال</span>
+            </label>
           </div>
         ))}
       </div>
       <div className="row">
-        <input placeholder="اسم موظف جديد" value={name} onChange={(e) => setName(e.target.value)} />
-        <button className="btn primary small" onClick={add}>إضافة</button>
+        <input
+          placeholder="اسم موظف جديد"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') add(); }}
+        />
+        <button className="btn primary small" onClick={add}>
+          <Icon name="plus" size={15} />
+          <span>إضافة</span>
+        </button>
       </div>
     </section>
   );
@@ -131,27 +195,48 @@ function UsersEditor() {
   };
   return (
     <section className="card">
-      <h3>المستخدمون والصلاحيات</h3>
+      <div className="card-head">
+        <h3>
+          <span className="card-title-icon"><Icon name="shield" size={16} /></span>
+          <span>المستخدمون والصلاحيات</span>
+        </h3>
+        <span className="badge gray">{users.length} مستخدم</span>
+      </div>
       <p className="muted small">أضف بريد الشخص هنا، ثم يفتح الموقع ويختار "حساب جديد" بنفس البريد.</p>
       <div className="stack">
         {users.map((u) => (
-          <div className="row" key={u.id}>
-            <span dir="ltr" className="grow">{u.id}</span>
-            <select value={u.role} onChange={(e) => save('users', u.id, { role: e.target.value })}>
-              <option value="manager">مدير المركز: اطلاع + رواتب</option>
-              <option value="admin">مسؤول: صلاحية كاملة</option>
-            </select>
-            <button className="btn ghost small" onClick={() => confirm('إزالة صلاحية هذا المستخدم؟') && remove('users', u.id)}>إزالة</button>
+          <div className="sub-card" key={u.id}>
+            <div className="row">
+              <span dir="ltr" className="grow"><b>{u.id}</b></span>
+              <select value={u.role} onChange={(e) => save('users', u.id, { role: e.target.value })}>
+                <option value="manager">مدير المركز: اطلاع + رواتب</option>
+                <option value="admin">مسؤول: صلاحية كاملة</option>
+              </select>
+              <button className="btn danger-ghost small" onClick={() => confirm('إزالة صلاحية هذا المستخدم؟') && remove('users', u.id)}>
+                <Icon name="trash" size={15} />
+                <span>إزالة</span>
+              </button>
+            </div>
           </div>
         ))}
       </div>
       <div className="row">
-        <input type="email" dir="ltr" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <input
+          type="email"
+          dir="ltr"
+          placeholder="email@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') add(); }}
+        />
         <select value={role} onChange={(e) => setRole(e.target.value)}>
           <option value="manager">مدير المركز</option>
           <option value="admin">مسؤول</option>
         </select>
-        <button className="btn primary small" onClick={add}>إضافة</button>
+        <button className="btn primary small" onClick={add}>
+          <Icon name="plus" size={15} />
+          <span>إضافة</span>
+        </button>
       </div>
     </section>
   );
@@ -200,14 +285,23 @@ function DataTools() {
 
   return (
     <section className="card">
-      <h3>استيراد وتصدير البيانات</h3>
+      <div className="card-head">
+        <h3>
+          <span className="card-title-icon"><Icon name="database" size={16} /></span>
+          <span>استيراد وتصدير البيانات</span>
+        </h3>
+      </div>
       <p className="muted small">استيراد البيانات السابقة أو نسخة احتياطية بصيغة JSON، أو تنزيل نسخة احتياطية كاملة.</p>
       <div className="row">
         <label className="btn">
-          استيراد ملف JSON
+          <Icon name="upload" size={16} />
+          <span>استيراد ملف JSON</span>
           <input type="file" accept=".json,application/json" hidden onChange={(e) => e.target.files[0] && doImport(e.target.files[0])} />
         </label>
-        <button className="btn" onClick={doExport}>تنزيل نسخة احتياطية</button>
+        <button className="btn primary" onClick={doExport}>
+          <Icon name="download" size={16} />
+          <span>تنزيل نسخة احتياطية</span>
+        </button>
       </div>
       {status && <div className="msg">{status}</div>}
     </section>
@@ -218,13 +312,33 @@ function About() {
   const { user, online, isCloud: cloud } = useStore();
   return (
     <section className="card">
-      <h3>حول الموقع</h3>
-      <ul className="plain">
-        <li>المستخدم: <span dir="ltr">{user.email}</span> ({user.role === 'admin' ? 'صلاحية كاملة' : 'مدير المركز'})</li>
-        <li>التخزين: {cloud ? 'Firebase سحابي مع نسخة على الجهاز' : 'محلي على هذا الجهاز (تجريبي)'}</li>
-        <li>الاتصال: {online ? 'متصل' : 'بدون إنترنت. التعديلات محفوظة وستُرفع عند الاتصال'}</li>
-        <li>لتثبيت الموقع كتطبيق: من المتصفح اختر "إضافة إلى الشاشة الرئيسية".</li>
-      </ul>
+      <div className="card-head">
+        <h3>
+          <span className="card-title-icon"><Icon name="info" size={16} /></span>
+          <span>حول الموقع</span>
+        </h3>
+      </div>
+      <div className="info-grid">
+        <div className="info-item">
+          <span className="info-label">المستخدم الحالي</span>
+          <span className="info-value" dir="ltr">{user.email}</span>
+        </div>
+        <div className="info-item">
+          <span className="info-label">الصلاحية</span>
+          <span className="info-value">{user.role === 'admin' ? 'مسؤول (صلاحية كاملة)' : 'مدير المركز (اطلاع + رواتب)'}</span>
+        </div>
+        <div className="info-item">
+          <span className="info-label">التخزين</span>
+          <span className="info-value">{cloud ? 'Firebase سحابي مع نسخة محلية' : 'محلي على هذا الجهاز (تجريبي)'}</span>
+        </div>
+        <div className="info-item">
+          <span className="info-label">حالة الاتصال</span>
+          <span className="info-value">{online ? 'متصل بالإنترنت' : 'بدون إنترنت (الحفظ محلي مؤقتًا)'}</span>
+        </div>
+      </div>
+      <p className="muted small" style={{ marginTop: '.75rem', marginBottom: 0 }}>
+        لتثبيت الموقع كتطبيق على الهاتف أو الحاسوب: من قائمة المتصفح اختر "إضافة إلى الشاشة الرئيسية".
+      </p>
     </section>
   );
 }
