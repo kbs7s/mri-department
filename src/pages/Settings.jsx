@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../data/store.jsx';
-import { save, remove, saveMany, isCloud, ownerEmail } from '../data/backend.js';
+import { save, remove, saveMany, isCloud } from '../data/backend.js';
 import { DEFAULT_MATERIALS, DEVICES } from '../data/model.js';
 
 export default function Settings() {
@@ -132,7 +132,7 @@ function UsersEditor() {
   return (
     <section className="card">
       <h3>المستخدمون والصلاحيات</h3>
-      <p className="muted small">أضف بريد الشخص هنا، ثم يفتح الموقع ويختار "حساب جديد" بنفس البريد. صاحب الموقع: <span dir="ltr">{ownerEmail || 'غير محدد'}</span></p>
+      <p className="muted small">أضف بريد الشخص هنا، ثم يفتح الموقع ويختار "حساب جديد" بنفس البريد.</p>
       <div className="stack">
         {users.map((u) => (
           <div className="row" key={u.id}>

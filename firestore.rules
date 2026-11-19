@@ -1,19 +1,25 @@
 rules_version = '2';
 // صلاحيات قاعدة البيانات
-// - صاحب الموقع (OWNER_EMAIL) ومن دوره admin: صلاحية كاملة
+// - صاحب الموقع (أول حساب يسجل) ومن دوره admin: صلاحية كاملة
 // - مدير المركز (manager): اطلاع على كل شيء + تعديل الرواتب وحقولها
-// غيّر OWNER_EMAIL أدناه إلى بريدك قبل النشر.
+// صاحب الموقع = أول حساب يسجل (يُحفظ في meta/owner ولا يمكن تغييره من الموقع).
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null && request.auth.token.email != null; }
     function myEmail() { return request.auth.token.email.lower(); }
-    function isOwner() { return signedIn() && myEmail() == 'OWNER_EMAIL'; }
+    function ownerDoc() { return /databases/$(database)/documents/meta/owner; }
+    function isOwner() { return signedIn() && exists(ownerDoc()) && get(ownerDoc()).data.email == myEmail(); }
     function userDoc() { return /databases/$(database)/documents/users/$(myEmail()); }
     function role() { return exists(userDoc()) ? get(userDoc()).data.role : 'none'; }
     function isAdmin() { return isOwner() || (signedIn() && role() == 'admin'); }
     function isManager() { return signedIn() && role() == 'manager'; }
     function isMember() { return isAdmin() || isManager(); }
 
+    match /meta/owner {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.email == myEmail();
+      allow update, delete: if false;
+    }
     match /users/{email} {
       allow read: if isAdmin() || (signedIn() && myEmail() == email);
       allow write: if isAdmin();
