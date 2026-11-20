@@ -1,13 +1,13 @@
 // طبقة البيانات: Firebase (سحابي + يعمل بدون إنترنت) أو تخزين محلي في الوضع التجريبي.
 import { firebaseConfig } from '../firebase-config.js';
-import { initializeApp } from 'firebase/app';
+import { initializeApp, deleteApp } from 'firebase/app';
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-  collection, doc, onSnapshot, setDoc, deleteDoc, writeBatch, serverTimestamp
+  collection, doc, onSnapshot, setDoc, deleteDoc, writeBatch, serverTimestamp, getDocFromServer
 } from 'firebase/firestore';
 import {
   getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  signOut, sendPasswordResetEmail
+  signOut, sendPasswordResetEmail, initializeAuth, inMemoryPersistence
 } from 'firebase/auth';
 
 export const isCloud = Boolean(firebaseConfig && firebaseConfig.apiKey);
@@ -137,6 +137,8 @@ export function onAuth(cb) {
         setDoc(doc(fdb, 'meta', 'owner'), { email, createdAt: serverTimestamp() }).catch((e) => console.warn(e));
       }
       owner = d.exists() ? d.data().email : null;
+      // علامة عامة تخفي "إعداد أول مرة" من صفحة الدخول بعد إنشاء صاحب الموقع
+      if (owner === email) setDoc(doc(fdb, 'meta', 'public'), { ownerSet: true }, { merge: true }).catch(() => {});
       emit();
     }, () => { owner = null; emit(); }));
     unsubs.push(onSnapshot(doc(fdb, 'users', email),
@@ -147,6 +149,27 @@ export function onAuth(cb) {
 }
 
 export const login = (email, pass) => signInWithEmailAndPassword(fauth, email.trim(), pass);
+// هل أُنشئ حساب صاحب الموقع؟ (بدون إنترنت نفترض نعم)
+export async function isSetupDone() {
+  if (!isCloud) return true;
+  try {
+    const d = await getDocFromServer(doc(fdb, 'meta', 'public'));
+    return d.exists() && d.data().ownerSet === true;
+  } catch { return true; }
+}
+
+// إنشاء حساب لشخص آخر بدون تسجيل خروج المسؤول (نسخة ثانية مؤقتة من Firebase)
+export async function createAccount(email, password) {
+  const sec = initializeApp(firebaseConfig, 'create-' + Date.now());
+  try {
+    const a = initializeAuth(sec, { persistence: inMemoryPersistence });
+    await createUserWithEmailAndPassword(a, email.trim(), password);
+    await signOut(a);
+  } finally {
+    await deleteApp(sec);
+  }
+}
+
 export const signup = (email, pass) => createUserWithEmailAndPassword(fauth, email.trim(), pass);
 export const logout = () => (isCloud ? signOut(fauth) : Promise.resolve());
 export const resetPassword = (email) => sendPasswordResetEmail(fauth, email.trim());

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../data/store.jsx';
-import { save, remove, saveMany, isCloud } from '../data/backend.js';
+import { save, remove, saveMany, isCloud, createAccount, resetPassword } from '../data/backend.js';
 import { DEFAULT_MATERIALS, DEVICES } from '../data/model.js';
 import { Icon } from '../components/ui.jsx';
 
@@ -183,16 +183,47 @@ function StaffEditor() {
   );
 }
 
+const ROLE_LABELS = { manager: 'مدير المركز: اطلاع + رواتب', admin: 'مسؤول: صلاحية كاملة' };
+const ACCOUNT_ERRORS = {
+  'auth/invalid-email': 'البريد غير صحيح',
+  'auth/weak-password': 'كلمة المرور يجب أن تكون 6 أحرف على الأقل',
+  'auth/network-request-failed': 'إضافة حساب تحتاج اتصالًا بالإنترنت',
+  'auth/operation-not-allowed': 'فعّل Email/Password في Firebase Authentication'
+};
+
 function UsersEditor() {
-  const { users } = useStore();
+  const { users, user } = useStore();
   const [email, setEmail] = useState('');
+  const [pass, setPass] = useState('');
   const [role, setRole] = useState('manager');
-  const add = () => {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
+
+  const add = async () => {
     const e = email.trim().toLowerCase();
-    if (!e.includes('@')) return alert('اكتب بريدًا صحيحًا');
-    save('users', e, { role });
-    setEmail('');
+    if (!e.includes('@')) return setMsg({ err: true, text: 'اكتب بريدًا صحيحًا' });
+    if (pass.length < 6) return setMsg({ err: true, text: 'كلمة المرور المؤقتة يجب أن تكون 6 أحرف على الأقل' });
+    setBusy(true); setMsg(null);
+    try {
+      let existed = false;
+      try { await createAccount(e, pass); }
+      catch (err) { if (err.code === 'auth/email-already-in-use') existed = true; else throw err; }
+      await save('users', e, { role, addedBy: user.email });
+      setMsg({ err: false, text: existed
+        ? `البريد ${e} كان له حساب سابق. أُعطي الصلاحية، ويدخل بكلمة مروره القديمة أو من "نسيت كلمة المرور".`
+        : `تم إنشاء حساب ${e}. أرسل له البريد وكلمة المرور المؤقتة، ويمكنه تغييرها من "نسيت كلمة المرور".` });
+      setEmail(''); setPass('');
+    } catch (err) {
+      setMsg({ err: true, text: ACCOUNT_ERRORS[err.code] || err.message });
+    }
+    setBusy(false);
   };
+
+  const sendReset = async (e) => {
+    try { await resetPassword(e); setMsg({ err: false, text: `أُرسل رابط تغيير كلمة المرور إلى ${e}` }); }
+    catch (err) { setMsg({ err: true, text: ACCOUNT_ERRORS[err.code] || err.message }); }
+  };
+
   return (
     <section className="card">
       <div className="card-head">
@@ -202,42 +233,50 @@ function UsersEditor() {
         </h3>
         <span className="badge gray">{users.length} مستخدم</span>
       </div>
-      <p className="muted small">أضف بريد الشخص هنا، ثم يفتح الموقع ويختار "حساب جديد" بنفس البريد.</p>
+      <p className="muted small">
+        لا يوجد تسجيل ذاتي في الموقع. المسؤول فقط يضيف الأشخاص هنا ويحدد صلاحيتهم. إزالة الشخص تسحب صلاحيته فورًا.
+      </p>
+      <ul className="plain small muted">
+        <li><b>مسؤول:</b> كل الصفحات، ويعدّل كل شيء، ويضيف ويزيل المستخدمين.</li>
+        <li><b>مدير المركز:</b> يطّلع على الرئيسية والجرد والإحصائية والتقارير، ويعدّل الرواتب فقط، ولا يرى الإعدادات.</li>
+      </ul>
       <div className="stack">
         {users.map((u) => (
           <div className="sub-card" key={u.id}>
             <div className="row">
               <span dir="ltr" className="grow"><b>{u.id}</b></span>
-              <select value={u.role} onChange={(e) => save('users', u.id, { role: e.target.value })}>
-                <option value="manager">مدير المركز: اطلاع + رواتب</option>
-                <option value="admin">مسؤول: صلاحية كاملة</option>
+              <select value={u.role} disabled={u.id === user.email}
+                onChange={(e) => save('users', u.id, { role: e.target.value })}>
+                <option value="manager">{ROLE_LABELS.manager}</option>
+                <option value="admin">{ROLE_LABELS.admin}</option>
               </select>
-              <button className="btn danger-ghost small" onClick={() => confirm('إزالة صلاحية هذا المستخدم؟') && remove('users', u.id)}>
-                <Icon name="trash" size={15} />
-                <span>إزالة</span>
+              <button className="btn ghost small" onClick={() => sendReset(u.id)}>
+                <span>رابط كلمة مرور</span>
               </button>
+              {u.id !== user.email && (
+                <button className="btn danger-ghost small" onClick={() => confirm(`إزالة صلاحية ${u.id}؟`) && remove('users', u.id)}>
+                  <Icon name="trash" size={15} />
+                  <span>إزالة</span>
+                </button>
+              )}
             </div>
           </div>
         ))}
       </div>
+      <h4>إضافة شخص جديد</h4>
       <div className="row">
-        <input
-          type="email"
-          dir="ltr"
-          placeholder="email@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') add(); }}
-        />
+        <input type="email" dir="ltr" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="off" />
+        <input type="text" dir="ltr" placeholder="كلمة مرور مؤقتة" value={pass} onChange={(e) => setPass(e.target.value)} autoComplete="new-password" />
         <select value={role} onChange={(e) => setRole(e.target.value)}>
           <option value="manager">مدير المركز</option>
           <option value="admin">مسؤول</option>
         </select>
-        <button className="btn primary small" onClick={add}>
+        <button className="btn primary small" onClick={add} disabled={busy}>
           <Icon name="plus" size={15} />
-          <span>إضافة</span>
+          <span>{busy ? 'جارِ الإضافة…' : 'إضافة'}</span>
         </button>
       </div>
+      {msg && <div className={`msg ${msg.err ? 'error' : ''}`}><span>{msg.text}</span></div>}
     </section>
   );
 }
