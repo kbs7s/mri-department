@@ -2,7 +2,8 @@ rules_version = '2';
 // صلاحيات قاعدة البيانات
 // - صاحب الموقع (أول حساب يسجل) ومن دوره admin: صلاحية كاملة
 // - مدير المركز (manager): اطلاع على كل شيء + تعديل الرواتب وحقولها
-// صاحب الموقع = أول حساب يسجل (يُحفظ في meta/owner ولا يمكن تغييره من الموقع).
+// لا يوجد تسجيل ذاتي: المسؤول يضيف الحسابات من الإعدادات.
+// صاحب الموقع = أول حساب يُنشأ من "إعداد أول مرة" (يُحفظ في meta/owner ولا يمكن تغييره من الموقع).
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null && request.auth.token.email != null; }
@@ -19,6 +20,10 @@ service cloud.firestore {
       allow read: if signedIn();
       allow create: if signedIn() && request.resource.data.email == myEmail();
       allow update, delete: if false;
+    }
+    match /meta/public {
+      allow read: if true;
+      allow write: if isOwner();
     }
     match /users/{email} {
       allow read: if isAdmin() || (signedIn() && myEmail() == email);

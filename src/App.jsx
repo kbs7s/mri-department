@@ -17,7 +17,7 @@ const PAGES = [
   { key: 'stats', label: 'الإحصائية', icon: 'stats', comp: Stats },
   { key: 'salaries', label: 'الرواتب', icon: 'salaries', comp: Salaries, salaries: true },
   { key: 'reports', label: 'التقارير', icon: 'reports', comp: Reports },
-  { key: 'settings', label: 'الإعدادات', icon: 'settings', comp: Settings }
+  { key: 'settings', label: 'الإعدادات', icon: 'settings', comp: Settings, admin: true }
 ];
 
 function useTheme() {
@@ -80,7 +80,7 @@ function Shell({ theme }) {
   const store = useStore();
   const [page, setPage] = usePersistentState('mri-page', 'home');
   const [ym, setYm] = usePersistentState('mri-ym', currentYm());
-  const pages = PAGES.filter((p) => (!p.salaries || store.canSalaries));
+  const pages = PAGES.filter((p) => (!p.salaries || store.canSalaries) && (!p.admin || store.isAdmin));
   const active = pages.find((p) => p.key === page) || pages[0];
   const Comp = active.comp;
   const roleLabel = store.user.role === 'admin' ? 'مسؤول النظام' : 'مدير المركز';

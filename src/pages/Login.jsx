@@ -1,11 +1,12 @@
-import { useState } from 'react';
-import { login, signup, resetPassword } from '../data/backend.js';
+import { useEffect, useState } from 'react';
+import { login, signup, resetPassword, isSetupDone } from '../data/backend.js';
 import { Icon } from '../components/ui.jsx';
 
 const ERRORS = {
   'auth/invalid-credential': 'البريد أو كلمة المرور غير صحيحة',
   'auth/invalid-email': 'البريد غير صحيح',
   'auth/email-already-in-use': 'هذا البريد مسجل مسبقًا، استخدم تسجيل الدخول',
+  'auth/user-disabled': 'هذا الحساب موقوف',
   'auth/weak-password': 'كلمة المرور يجب أن تكون 6 أحرف على الأقل',
   'auth/network-request-failed': 'لا يوجد اتصال بالإنترنت. أول تسجيل دخول يحتاج إنترنت',
   'auth/too-many-requests': 'محاولات كثيرة، حاول بعد قليل'
@@ -18,6 +19,8 @@ export default function Login() {
   const [mode, setMode] = useState('login');
   const [msg, setMsg] = useState({ text: '', isError: false });
   const [busy, setBusy] = useState(false);
+  const [setupDone, setSetupDone] = useState(true);
+  useEffect(() => { isSetupDone().then(setSetupDone); }, []);
 
   const switchMode = (next) => {
     setMode(next);
@@ -50,26 +53,10 @@ export default function Login() {
           <p className="muted small">نظام إدارة مخزون وإحصائيات الرنين والمفراس</p>
         </div>
 
-        {mode !== 'reset' && (
-          <div className="login-tabs" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === 'login'}
-              className={`login-tab ${mode === 'login' ? 'active' : ''}`}
-              onClick={() => switchMode('login')}
-            >
-              تسجيل الدخول
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === 'signup'}
-              className={`login-tab ${mode === 'signup' ? 'active' : ''}`}
-              onClick={() => switchMode('signup')}
-            >
-              حساب جديد
-            </button>
+        {mode === 'signup' && (
+          <div className="msg">
+            <Icon name="shield" size={16} />
+            <span>إعداد أول مرة: هذا الحساب سيصبح صاحب الموقع بصلاحية كاملة.</span>
           </div>
         )}
 
@@ -129,7 +116,7 @@ export default function Login() {
         </button>
 
         <div className="login-links">
-          {mode !== 'reset' ? (
+          {mode === 'login' ? (
             <button type="button" className="link" onClick={() => switchMode('reset')}>
               نسيت كلمة المرور؟
             </button>
@@ -138,7 +125,17 @@ export default function Login() {
               العودة إلى تسجيل الدخول
             </button>
           )}
+          {mode === 'login' && !setupDone && (
+            <button type="button" className="link" onClick={() => switchMode('signup')}>
+              إعداد أول مرة
+            </button>
+          )}
         </div>
+        {mode === 'login' && (
+          <p className="muted small" style={{ textAlign: 'center', margin: 0 }}>
+            لا يمكن إنشاء حساب من هنا. يضيف مسؤول الموقع الحسابات من الإعدادات.
+          </p>
+        )}
       </form>
     </div>
   );
