@@ -84,3 +84,32 @@ export function salaryNet(fields, values) {
   }
   return total;
 }
+
+/* ---------------- المشتريات ---------------- */
+export const CURRENCIES = [{ key: 'USD', label: '$' }, { key: 'IQD', label: 'د.ع' }];
+export const currencyLabel = (c) => (CURRENCIES.find((x) => x.key === c) || CURRENCIES[0]).label;
+export const todayIso = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+export const purchaseTotal = (p) => (num(p.qty) ?? 0) * (num(p.unitPrice) ?? 0);
+
+// يجمع المشتريات المستلمة لكل مادة/شهر ويضعها في حقل الشراء
+export function mergePurchases(invMap, purchases) {
+  const sums = {};
+  for (const p of purchases) {
+    if (p.status === 'ordered' || !p.date || !p.materialId) continue;
+    const key = invId(p.date.slice(0, 7), p.materialId);
+    sums[key] = sums[key] || { qty: 0, n: 0 };
+    sums[key].qty += num(p.qty) ?? 0;
+    sums[key].n += 1;
+  }
+  if (!Object.keys(sums).length) return invMap;
+  const out = { ...invMap };
+  for (const [key, s] of Object.entries(sums)) {
+    const [ym, ...rest] = key.split('_');
+    const base = out[key] || { ym, materialId: rest.join('_') };
+    out[key] = { ...base, manualPurchased: base.purchased ?? null, purchased: Math.round(s.qty * 100) / 100, purchasedLog: s.n };
+  }
+  return out;
+}

@@ -35,5 +35,7 @@ service cloud.firestore {
     match /staff/{id} { allow read: if isMember(); allow write: if isAdmin(); }
     match /inventory/{id} { allow read: if isMember(); allow write: if isAdmin(); }
     match /stats/{id} { allow read: if isMember(); allow write: if isAdmin(); }
+    match /purchases/{id} { allow read: if isMember(); allow write: if isAdmin(); }
+    match /counts/{id} { allow read: if isMember(); allow write: if isAdmin(); }
   }
 }

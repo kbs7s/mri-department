@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { subscribe, isCloud } from './backend.js';
-import { sortByOrder } from './model.js';
+import { sortByOrder, mergePurchases } from './model.js';
 
 const StoreCtx = createContext(null);
-const COLS = ['materials', 'staff', 'inventory', 'stats', 'salaryFields', 'salaries'];
+const COLS = ['materials', 'staff', 'inventory', 'stats', 'salaryFields', 'salaries', 'purchases', 'counts'];
 
 export function StoreProvider({ user, children }) {
   const [data, setData] = useState({});
@@ -37,7 +37,11 @@ export function StoreProvider({ user, children }) {
       loaded: COLS.every((c) => data[c] !== undefined),
       materials, activeMaterials: materials.filter((m) => m.active !== false),
       staff, activeStaff: staff.filter((s) => s.active !== false),
-      inventory: byId(data.inventory),
+      rawInventory: byId(data.inventory),
+      // الشراء في الجرد الشهري يُحسب من سجل المشتريات عند وجوده
+      inventory: mergePurchases(byId(data.inventory), data.purchases || []),
+      purchases: [...(data.purchases || [])].sort((a, b) => String(b.date).localeCompare(String(a.date))),
+      counts: [...(data.counts || [])].sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.id).localeCompare(String(a.id))),
       stats: byId(data.stats),
       salaryFields,
       salaries: byId(data.salaries),

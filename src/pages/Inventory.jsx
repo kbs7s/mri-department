@@ -118,7 +118,15 @@ function MaterialCard({ material: m, ym, inv, editable }) {
           />
         ))}
         <NumField label="المصروف" value={it.consumed} disabled={!editable} onSave={(v) => put({ consumed: v })} />
-        <NumField label="الشراء" value={it.purchased} disabled={!editable} onSave={(v) => put({ purchased: v })} />
+        {it.purchasedLog ? (
+          <label className="field">
+            <span className="field-label">الشراء</span>
+            <input value={fmt(it.purchased)} disabled readOnly />
+            <span className="field-hint">من سجل المشتريات ({it.purchasedLog})</span>
+          </label>
+        ) : (
+          <NumField label="الشراء" value={it.purchased} disabled={!editable} onSave={(v) => put({ purchased: v })} />
+        )}
         {m.hasSale && <NumField label="بيع" value={it.sold} disabled={!editable} onSave={(v) => put({ sold: v })} />}
         <NumField label="تالف" value={it.damaged} disabled={!editable} onSave={(v) => put({ damaged: v })} />
         <NumField
@@ -157,7 +165,7 @@ function MaterialCard({ material: m, ym, inv, editable }) {
       )}
 
       <button type="button" className="btn ghost accordion-trigger" onClick={() => setOpen(!open)}>
-        <span>{open ? 'إخفاء تفاصيل الشراء والملاحظات' : 'تفاصيل الشراء والملاحظات'}</span>
+        <span>{open ? 'إخفاء الملاحظات وتفاصيل الشراء القديمة' : 'الملاحظات وتفاصيل الشراء القديمة'}</span>
         <Icon name="chevronDown" size={16} className={`accordion-chevron ${open ? 'open' : ''}`} />
       </button>
 
