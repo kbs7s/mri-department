@@ -7,13 +7,17 @@ import Login from './pages/Login.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Inventory from './pages/Inventory.jsx';
 import Stats from './pages/Stats.jsx';
+import Purchases from './pages/Purchases.jsx';
+import Counts from './pages/Counts.jsx';
 import Salaries from './pages/Salaries.jsx';
 import Reports from './pages/Reports.jsx';
 import Settings from './pages/Settings.jsx';
 
 const PAGES = [
   { key: 'home', label: 'الرئيسية', icon: 'home', comp: Dashboard },
-  { key: 'inventory', label: 'الجرد', icon: 'inventory', comp: Inventory },
+  { key: 'inventory', label: 'الجرد الشهري', icon: 'inventory', comp: Inventory },
+  { key: 'purchases', label: 'المشتريات', icon: 'cart', comp: Purchases },
+  { key: 'counts', label: 'جرد المواد', icon: 'clipboard', comp: Counts },
   { key: 'stats', label: 'الإحصائية', icon: 'stats', comp: Stats },
   { key: 'salaries', label: 'الرواتب', icon: 'salaries', comp: Salaries, salaries: true },
   { key: 'reports', label: 'التقارير', icon: 'reports', comp: Reports },

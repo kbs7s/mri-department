@@ -281,7 +281,7 @@ function UsersEditor() {
   );
 }
 
-const BACKUP_COLS = ['materials', 'staff', 'inventory', 'stats', 'salaryFields', 'salaries'];
+const BACKUP_COLS = ['materials', 'staff', 'inventory', 'stats', 'salaryFields', 'salaries', 'purchases', 'counts'];
 
 function DataTools() {
   const store = useStore();
@@ -309,7 +309,8 @@ function DataTools() {
   const doExport = () => {
     const raw = {
       materials: store.materials, staff: store.staff, salaryFields: store.salaryFields,
-      inventory: Object.values(store.inventory), stats: Object.values(store.stats), salaries: Object.values(store.salaries)
+      inventory: Object.values(store.rawInventory), stats: Object.values(store.stats), salaries: Object.values(store.salaries),
+      purchases: store.purchases, counts: store.counts
     };
     const collections = {};
     for (const [col, list] of Object.entries(raw)) {

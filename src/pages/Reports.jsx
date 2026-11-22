@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../data/store.jsx';
-import { DEVICES, MONTHS, fmt, itemFor, ymOf, n0, num, salaryNet } from '../data/model.js';
+import { DEVICES, MONTHS, fmt, itemFor, ymOf, n0, num, salaryNet, purchaseTotal, currencyLabel } from '../data/model.js';
 import { contrastCounts, deviceTotals } from '../data/derived.js';
 import { YearPicker, BarChart, Stat, Icon, usePersistentState } from '../components/ui.jsx';
 
@@ -243,7 +243,8 @@ export default function Reports() {
 
 async function exportYear(store, year) {
   const XLSX = await import('xlsx');
-  const { materials, inventory, stats, staff, salaryFields, salaries, canSalaries } = store;
+  const { materials, inventory, stats, staff, salaryFields, salaries, canSalaries, purchases, counts } = store;
+  const matName = (id) => materials.find((m) => m.id === id)?.name || id;
   const wb = XLSX.utils.book_new();
   const months = monthsOf(year);
   const addSheet = (name, aoa) => {
@@ -285,6 +286,23 @@ async function exportYear(store, year) {
       if (d) aoa.push([m, s.name, ...salaryFields.map((f) => num(d.values?.[f.id])), salaryNet(salaryFields, d.values)]);
     }
     addSheet('الرواتب', aoa);
+  }
+
+  const yp = purchases.filter((p) => p.date?.startsWith(String(year)));
+  if (yp.length) {
+    addSheet('المشتريات', [
+      ['التاريخ', 'المادة', 'الكمية', 'سعر الوحدة', 'المجموع', 'العملة', 'البائع', 'رقم الفاتورة', 'الحالة', 'ملاحظات'],
+      ...[...yp].reverse().map((p) => [p.date, matName(p.materialId), num(p.qty), num(p.unitPrice), purchaseTotal(p),
+        currencyLabel(p.currency), p.vendor || '', p.invoiceNo || '', p.status === 'ordered' ? 'طلب' : 'مستلم', p.notes || ''])
+    ]);
+  }
+  const yc = counts.filter((c) => c.date?.startsWith(String(year)));
+  if (yc.length) {
+    addSheet('جرد المواد', [
+      ['التاريخ', 'النوع', ...materials.map((m) => m.name), 'ملاحظات'],
+      ...[...yc].reverse().map((c) => [c.date, c.type === 'end' ? 'نهاية الشهر' : 'أثناء الشهر',
+        ...materials.map((m) => num(c.items?.[m.id])), c.notes || ''])
+    ]);
   }
 
   XLSX.writeFile(wb, `جرد-قسم-الأشعة-${year}.xlsx`);
